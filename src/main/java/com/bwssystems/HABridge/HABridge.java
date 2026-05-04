@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.bwssystems.HABridge.devicemanagmeent.*;
+import com.bwssystems.HABridge.hue.ClipV2Resource;
 import com.bwssystems.HABridge.hue.HueMulator;
 import com.bwssystems.HABridge.plugins.http.HttpClientPool;
 import com.bwssystems.HABridge.upnp.UpnpListener;
@@ -95,6 +96,8 @@ public class HABridge {
 		        // setup the class to handle the hue emulator rest api
 		        theHueMulator = new HueMulator(bridgeSettings, theResources.getDeviceRepository(), theResources.getGroupRepository(), homeManager);
 		        theHueMulator.setupServer();
+		        // setup Hue CLIP API v2 alongside v1
+		        new ClipV2Resource(theHueMulator, theResources.getDeviceRepository(), bridgeSettings).setupServer();
 		        // wait for the sparkjava initialization of the rest api classes to be complete
 		        awaitInitialization();
 

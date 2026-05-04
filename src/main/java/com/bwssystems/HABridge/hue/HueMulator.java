@@ -457,6 +457,16 @@ public class HueMulator {
 		});
 	}
 
+	// Package-accessible wrappers for CLIP API v2
+
+	String changeStateForV2(String lightId, String v1Body, String appKey, String ip) {
+		return changeState(appKey, lightId, v1Body, ip, true);
+	}
+
+	Object getLightsMapForV2(String appKey, String ip) {
+		return lightsListHandler(appKey, ip);
+	}
+
 	@SuppressWarnings("unchecked")
 	private String formatSuccessHueResponse(StateChangeBody stateChanges, String body, String lightId,
 			DeviceState deviceState, Integer targetBri, Integer targetBriInc, ColorData colorData, boolean offState) {
