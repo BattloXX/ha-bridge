@@ -1,0 +1,10 @@
+services:
+  ha-bridge:
+    build: .
+    container_name: ha-bridge
+    # host networking is required for UPnP/SSDP multicast discovery
+    network_mode: host
+    volumes:
+      - ./data:/ha-bridge/data
+      - /etc/localtime:/etc/localtime:ro
+    restart: unless-stopped

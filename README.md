@@ -82,11 +82,12 @@ Copy the text below into the editor nano.
 ```
 [Unit]
 Description=HA Bridge
-Wants=network.target
-After=network.target
+Wants=network-online.target
+After=network-online.target
 
 [Service]
 Type=simple
+Restart=on-failure
 
 WorkingDirectory=/home/pi/ha-bridge
 ExecStart=/usr/bin/java -jar -Dconfig.file=/home/pi/ha-bridge/data/habridge.config /home/pi/ha-bridge/ha-bridge-5.4.1.jar
@@ -118,60 +119,45 @@ pi@raspberrypi:~ $ tail -f /var/log/syslog
 ```
 
 ### ha-bridge inside Docker container
-Docker start offering official support for Raspbian operating system since autumn 2016.
-Running services inside containers became to be a good alternative to normal installation method described before.
+The repository includes a `Dockerfile` and a `docker-compose.yml` based on
+**Eclipse Temurin JRE 11** (`eclipse-temurin:11-jre-alpine`), which is the
+official multi-arch image and works on x86_64, ARM64, and ARMv7 (Raspberry Pi)
+without separate architecture-specific images.
 
-Install Docker Community Edition (CE) on Raspberry Pi
+Install Docker and build the image:
 ```
-pi@raspberrypi:~ $ curl -fsSL get.docker.com -o get-docker.sh
-pi@raspberrypi:~ $ sudo sh get-docker.sh
+pi@raspberrypi:~ $ curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+pi@raspberrypi:~/ha-bridge $ mvn package -DskipTests
+pi@raspberrypi:~/ha-bridge $ docker build -t ha-bridge .
 ```
 
-For every architecture there is a specialized ha-bridge Docker image available.
-Please use the suitable image from the following list.
-
-* Generic x86 / x86_64 system: [aptalca/home-automation-bridge](https://hub.docker.com/r/aptalca/home-automation-bridge)
-* Raspberry Pi 1 (ARM): [habridge/ha-bridge-raspberry-pi](https://hub.docker.com/r/habridge/ha-bridge-raspberry-pi)
-* Raspberry Pi 2 (ARM): [habridge/ha-bridge-raspberry-pi2](https://hub.docker.com/r/habridge/ha-bridge-raspberry-pi2)
-* Raspberry Pi 3 (ARM): [habridge/ha-bridge-raspberrypi3](https://hub.docker.com/r/habridge/ha-bridge-raspberrypi3)
-
-The following example explains how to run the latest version of ha-bridge Docker container on Raspberry Pi 3.
+**Option A – docker-compose (recommended)**
 ```
-pi@raspberrypi:~ $ docker pull habridge/ha-bridge-raspberrypi3
+pi@raspberrypi:~/ha-bridge $ docker compose up -d
+```
+Config and device data are stored in `./data/` on the host.
+
+**Option B – plain docker run**
+```
 pi@raspberrypi:~ $ docker run \
     --name ha-bridge \
-    --rm \
-    --init \
     --detach \
     --net=host \
-    --volume=$PWD:/ha-bridge/data \
+    --volume=$PWD/data:/ha-bridge/data \
     --volume=/etc/localtime:/etc/localtime:ro \
-    --volume=/etc/timezone:/etc/timezone:ro \
-    habridge/ha-bridge-raspberrypi3
+    --restart=unless-stopped \
+    ha-bridge
 ```
 
-To set additional arguments for ha-bridge just write them as arguments for docker run command.
+To pass additional JVM or ha-bridge arguments append them after the image name:
 ```
-pi@raspberrypi:~ $ docker run \
-     --name ha-bridge \
-     --rm \
-     --init \
-     --detach \
-     --net=host \
-     --volume=$PWD:/ha-bridge/data \
-     --volume=/etc/localtime:/etc/localtime:ro \
-     --volume=/etc/timezone:/etc/timezone:ro \
-     habridge/ha-bridge-raspberrypi3 \
-     -Dserver.port=8080 \
-     -Dsecurity.key=secret
+    ha-bridge -Dserver.port=8080 -Dsecurity.key=secret
 ```
 
-To halt the ha-bridge Docker container use the `stop` command:
+To stop the container:
 ```
 pi@raspberrypi:~ $ docker stop ha-bridge
 ```
-
-If you like to automate the deployment just use the Ansible role on https://github.com/escalate/ansible-ha-bridge-docker.
 
 ## Run ha-bridge alongside web server already on port 80
 These examples will help you proxy your current webserver requests to the ha-bridge running on a different port, such as 8080.
