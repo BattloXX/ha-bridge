@@ -44,20 +44,48 @@ In the cases of systems that require authorization and/or have APIs that cannot 
 Alternatively the Bridge supports custom calls and executing programs/scripts as well using http/https/udp and tcp such as the LimitlessLED/MiLight bulbs using the UDP protocol. Binary data is supported with UDP/TCP.
 
 This bridge was built to help put the Internet of Things together.
+## Requirements
+ha-bridge requires **Java 11 or newer** and Maven 3.6+ to build.
+
+| OS / Distribution | Install command |
+|---|---|
+| Raspberry Pi OS Bookworm (Debian 12) | `sudo apt install openjdk-17-jdk maven` |
+| Raspberry Pi OS Bullseye (Debian 11) | `sudo apt install openjdk-11-jdk maven` |
+| DietPi | `sudo dietpi-software install 196` then install Maven manually (see note) |
+| Ubuntu 22.04+ / Debian 12+ | `sudo apt install openjdk-17-jdk maven` |
+| Windows | Install [Eclipse Temurin 17](https://adoptium.net) + [Maven](https://maven.apache.org/download.cgi) |
+
+> **Note for Raspberry Pi OS Bookworm:** `openjdk-11-jdk` is not available in the
+> default Bookworm repositories. Use `openjdk-17-jdk` instead — the project
+> compiles to Java 11 bytecode (`<release>11</release>`) and runs on any JVM ≥ 11.
+
+> **Note for DietPi:** Neither `openjdk-11-jdk` nor `openjdk-17-jdk` are available
+> via `apt` on DietPi. Use `dietpi-software` (Software ID **196**) to install Java 17:
+> ```
+> sudo dietpi-software install 196
+> ```
+> Maven is not included — install it separately:
+> ```
+> sudo apt install maven
+> ```
+> If `maven` is also unavailable, download it manually from https://maven.apache.org/download.cgi
+> and add it to your `PATH`.
+
 ## Build
-To customize and build it yourself, build a new jar with maven:  
+To customize and build it yourself, build a new jar with maven:
 
 ```
-mvn install
+mvn package -DskipTests
 ```
-Otherwise, downloads are available at https://github.com/bwssytems/ha-bridge/releases.  
+Otherwise, downloads are available at https://github.com/bwssytems/ha-bridge/releases.
+
 ## Run
-Then locate the jar and start the server with:  
+Then locate the jar and start the server with:
 
 ATTENTION: Due to port 80 being the default, Linux restricts this to super user. Use the instructions below.
 
 ```
-java -jar ha-bridge-5.4.1.jar
+java -jar target/ha-bridge-5.4.1-java11.jar
 ```
 
 ## Manual installation of ha-bridge and setup of systemd service
