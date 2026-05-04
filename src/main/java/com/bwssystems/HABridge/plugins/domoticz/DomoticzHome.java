@@ -95,7 +95,7 @@ public class DomoticzHome implements Home {
 			String theUrlBody = intermediate.substring(intermediate.indexOf('/') + 1);
 			String hostAddr = null;
 			if (hostPortion.contains(":")) {
-				hostAddr = hostPortion.substring(0, intermediate.indexOf(':'));
+				hostAddr = hostPortion.substring(0, hostPortion.indexOf(':'));
 			} else
 				hostAddr = hostPortion;
 			DomoticzHandler theHandler = findHandlerByAddress(hostAddr);
