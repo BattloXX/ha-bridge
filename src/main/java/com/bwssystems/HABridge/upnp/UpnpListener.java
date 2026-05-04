@@ -278,11 +278,13 @@ public class UpnpListener {
 	protected boolean isSSDPDiscovery(DatagramPacket packet) {
 		// Only respond to discover request for strict upnp form
 		String packetString = new String(packet.getData(), 0, packet.getLength());
-//		log.info("Packet string <<<" + packetString + ">>>");
-		if (packetString != null && packetString.startsWith("M-SEARCH * HTTP/1.1")
-				&& packetString.contains("\"ssdp:discover\"")) {
-			if ((packetString.contains("ST: urn:schemas-upnp-org:device:basic:1")
-					|| packetString.contains("ST: upnp:rootdevice") || packetString.contains("ST: ssdp:all"))) {
+		String packetLower = packetString.toLowerCase();
+		if (packetString.startsWith("M-SEARCH * HTTP/1.1")
+				&& (packetLower.contains("man: \"ssdp:discover\"") || packetLower.contains("man:\"ssdp:discover\""))) {
+			if (packetLower.contains("st: urn:schemas-upnp-org:device:basic:1")
+					|| packetLower.contains("st: upnp:rootdevice")
+					|| packetLower.contains("st: ssdp:all")
+					|| (packetLower.contains("st: uuid:") && packetString.contains(bridgeSNUUID))) {
 				if (traceupnp) {
 					log.info("Traceupnp: SSDP M-SEARCH packet from " + packet.getAddress().getHostAddress() + ":"
 							+ packet.getPort());
@@ -290,17 +292,8 @@ public class UpnpListener {
 					log.debug("SSDP M-SEARCH packet from " + packet.getAddress().getHostAddress() + ":"
 							+ packet.getPort() + ", body: <<<" + packetString + ">>>");
 				return true;
-			} /*
-				 * else if (!strict) { if(traceupnp) {
-				 * log.info("Traceupnp: SSDP M-SEARCH packet (!strict) from " +
-				 * packet.getAddress().getHostAddress() + ":" + packet.getPort()); } else
-				 * log.debug("SSDP M-SEARCH packet (!strict) from " +
-				 * packet.getAddress().getHostAddress() + ":" + packet.getPort() + ", body: <<<"
-				 * + packetString + ">>>"); return true; }
-				 */
+			}
 		} else {
-			// log.debug("isSSDPDiscovery found message to not be valid - strict: " +
-			// strict);
 			log.debug("SSDP packet from " + packet.getAddress().getHostAddress() + ":" + packet.getPort() + ", body: "
 					+ packetString);
 		}

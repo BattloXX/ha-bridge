@@ -30,9 +30,9 @@ public class BrightnessDecode {
 			setIntensity = targetBri;
 		} else if (targetBriInc != null) {
 			if ((setIntensity + targetBriInc) <= 1)
-				setIntensity = targetBriInc;
+				setIntensity = 1;
 			else if ((setIntensity + targetBriInc) > 254)
-				setIntensity = targetBriInc;
+				setIntensity = 254;
 			else
 				setIntensity = setIntensity + targetBriInc;
 		}
@@ -63,22 +63,22 @@ public class BrightnessDecode {
 		String mathDescriptor = null;
 
 		if(intensity > 0) {
-			decimalBrightness = (float) (intensity / 255.0);
+			decimalBrightness = (float) (intensity / 254.0);
 			if(intensity > 0 && intensity < 5)
 				percentBrightness = 1;
 			else
-				percentBrightness = (int) Math.round(intensity / 255.0 * 100);
+				percentBrightness = (int) Math.round(intensity / 254.0 * 100);
 		} else {
 			decimalBrightness = (float) 1.0;
 			percentBrightness = 1;
 		}
 
 		if(previous_intensity > 0) {
-			previousDecimalBrightness = (float) (previous_intensity / 255.0);
+			previousDecimalBrightness = (float) (previous_intensity / 254.0);
 			if(previous_intensity > 0 && previous_intensity < 5)
 				previousPercentBrightness = 1;
 			else
-				previousPercentBrightness = (int) Math.round(previous_intensity / 255.0 * 100);
+				previousPercentBrightness = (int) Math.round(previous_intensity / 254.0 * 100);
 		} else {
 			previousDecimalBrightness = (float) 1.0;
 			previousPercentBrightness = 1;
