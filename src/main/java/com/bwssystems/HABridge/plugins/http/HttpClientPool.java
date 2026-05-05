@@ -187,9 +187,9 @@ public final class HttpClientPool {
   }
 
   public static void shutdown() throws InterruptedException, IOException {
-    // Shutdown the monitor.
     Singleton.Client.monitor.shutdown();
-    SingletonSSL.SSLClient.monitor.shutdown();
+    if (SingletonSSL.SSLClient.monitor != null)
+      SingletonSSL.SSLClient.monitor.shutdown();
   }
 
 }

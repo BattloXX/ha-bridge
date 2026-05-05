@@ -544,11 +544,10 @@ public class SystemControl {
     }
     
     private void setupLoggerSettings() {
-//		final ch.qos.logback.classic.Logger logger = lc.getLogger(Logger.ROOT_LOGGER_NAME);
-
        cyclicBufferAppender = (CyclicBufferAppender<ILoggingEvent>) lc.getLogger(
             Logger.ROOT_LOGGER_NAME).getAppender(CYCLIC_BUFFER_APPENDER_NAME);
-        cyclicBufferAppender.setMaxSize(bridgeSettings.getBridgeSettingsDescriptor().getNumberoflogmessages());
+        if (cyclicBufferAppender != null)
+            cyclicBufferAppender.setMaxSize(bridgeSettings.getBridgeSettingsDescriptor().getNumberoflogmessages());
 //        if(bridgeSettings.getBridgeSettingsDescriptor().getActiveloggers() != null) {
 //    		for (NameValue temp : bridgeSettings.getBridgeSettingsDescriptor().getActiveloggers()) {
 //    			if(temp.getValue().equals("false"))

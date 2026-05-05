@@ -194,6 +194,8 @@ public class UpnpListener {
 
 		if (bridgeControl.isReinit() || bridgeControl.isStop()) {
 			log.warn("UPNP Listener exiting as reinit or stop requested....");
+			if (jmdns != null)
+				jmdns.unregisterAllServices();
 			return false;
 		}
 
@@ -239,8 +241,7 @@ public class UpnpListener {
 				try {
 					sendUpnpNotify(socketAddress.getAddress());
 				} catch (IOException en) {
-					log.warn("UpnpListener encountered an error sending upnp notify packets. IP: "
-							+ packet.getAddress().getHostAddress() + " with message: " + en.getMessage());
+					log.warn("UpnpListener encountered an error sending upnp notify packets with message: " + en.getMessage());
 					log.debug("UpnpListener send upnp notify exception: ", en);
 				}
 			} catch (IOException e) {
@@ -248,10 +249,12 @@ public class UpnpListener {
 				error = true;
 			}
 			if (error || bridgeControl.isReinit() || bridgeControl.isStop()) {
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e) {
-					// noop
+				if (error) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e) {
+						Thread.currentThread().interrupt();
+					}
 				}
 				loopControl = false;
 			}
