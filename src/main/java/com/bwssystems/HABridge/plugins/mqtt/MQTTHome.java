@@ -52,7 +52,7 @@ public class MQTTHome implements Home {
 			}
 		}
 		handlers = null;
-		closed = false;
+		closed = true;
 	}
 
 	public MQTTHandler getMQTTHandler(String aName) {

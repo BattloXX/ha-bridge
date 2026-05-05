@@ -203,7 +203,7 @@ public class FHEMHome implements Home {
 	@Override
 	public void closeHome() {
 		log.debug("Closing Home.");
-		if(!closed && validFhem) {
+		if(closed) {
 			log.debug("Home is already closed....");
 			return;
 		}

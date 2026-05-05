@@ -63,8 +63,8 @@ public class TCPHome implements Home {
 			dataSendSocket = theSockets.get(hostPortion);
 			if(dataSendSocket == null) {
 				if (hostPortion.contains(":")) {
-					hostAddr = hostPortion.substring(0, intermediate.indexOf(':'));
-					port = hostPortion.substring(intermediate.indexOf(':') + 1);
+					hostAddr = hostPortion.substring(0, hostPortion.indexOf(':'));
+					port = hostPortion.substring(hostPortion.indexOf(':') + 1);
 				} else
 					hostAddr = hostPortion;
 				try {

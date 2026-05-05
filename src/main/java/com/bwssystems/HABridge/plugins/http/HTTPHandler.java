@@ -97,8 +97,8 @@ public class HTTPHandler {
 				request.setHeader(headers[i].getName(), headers[i].getValue());
 			}
 		}
-		CloseableHttpResponse response = null;
 		for (int retryCount = 0; retryCount < 2; retryCount++) {
+			CloseableHttpResponse response = null;
 			try {
 				if (usingSSL) {
 					response = HttpClientPool.getSSLClient().execute(request);
@@ -107,26 +107,16 @@ public class HTTPHandler {
 				}
 				log.debug((httpVerb == null ? "GET" : httpVerb) + " execute (" + retryCount + ") on URL responded: "
 						+ response.getStatusLine().getStatusCode());
-				if (response != null && response.getEntity() != null) {
+				if (response.getEntity() != null) {
 					try {
-
-						theContent = EntityUtils.toString(response.getEntity(), Charset.forName("UTF-8")); // read
-																											// content
-																											// for
-																											// data
-
-						EntityUtils.consume(response.getEntity()); // close out
-																	// inputstream
-																	// ignore
-																	// content
+						theContent = EntityUtils.toString(response.getEntity(), Charset.forName("UTF-8"));
+						EntityUtils.consume(response.getEntity());
 					} catch (Exception e) {
-						log.debug(
-								"Error ocurred in handling response entity after successful call, still responding success. "
-										+ e.getMessage(),
-								e);
+						log.debug("Error ocurred in handling response entity after successful call, still responding success. "
+								+ e.getMessage(), e);
 					}
 				}
-				if (response != null && response.getStatusLine().getStatusCode() >= 200
+				if (response.getStatusLine().getStatusCode() >= 200
 						&& response.getStatusLine().getStatusCode() < 300) {
 					if (theContent == null)
 						theContent = "";
@@ -138,9 +128,8 @@ public class HTTPHandler {
 						theContent = "";
 					log.debug("Successfull response - The http response is <<<" + theContent + ">>>");
 					retryCount = 2;
-				} else if (response != null) {
-					log.warn(
-							"HTTP response code was not an expected successful response of between 200 - 299, the code was: "
+				} else {
+					log.warn("HTTP response code was not an expected successful response of between 200 - 299, the code was: "
 									+ response.getStatusLine() + " with the content of <<<" + theContent + ">>>");
 					if (response.getStatusLine().getStatusCode() == 504) {
 						log.warn("HTTP response code was 504, retrying...");
@@ -149,12 +138,15 @@ public class HTTPHandler {
 					} else
 						retryCount = 2;
 				}
-
 			} catch (ClientProtocolException e) {
 				log.warn("Client Protocol Exception received, retyring....");
 			} catch (IOException e) {
 				log.warn("Error calling out to HA gateway: IOException in log: " + e.getMessage(), e);
 				retryCount = 2;
+			} finally {
+				if (response != null) {
+					try { response.close(); } catch (IOException e) { /* ignored */ }
+				}
 			}
 
 			if (retryCount < 2) {
@@ -162,7 +154,7 @@ public class HTTPHandler {
 				try {
 					Thread.sleep(1000);
 				} catch (InterruptedException e1) {
-					// noop
+					Thread.currentThread().interrupt();
 				}
 			}
 		}
