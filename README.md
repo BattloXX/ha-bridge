@@ -51,7 +51,7 @@ ha-bridge requires **Java 11 or newer** and Maven 3.6+ to build.
 |---|---|
 | Raspberry Pi OS Bookworm (Debian 12) | `sudo apt install openjdk-17-jdk maven` |
 | Raspberry Pi OS Bullseye (Debian 11) | `sudo apt install openjdk-11-jdk maven` |
-| DietPi | `sudo dietpi-software install 196` then install Maven manually (see note) |
+| DietPi (Trixie/Debian 13) | `sudo apt install default-jdk maven` |
 | Ubuntu 22.04+ / Debian 12+ | `sudo apt install openjdk-17-jdk maven` |
 | Windows | Install [Eclipse Temurin 17](https://adoptium.net) + [Maven](https://maven.apache.org/download.cgi) |
 
@@ -59,17 +59,11 @@ ha-bridge requires **Java 11 or newer** and Maven 3.6+ to build.
 > default Bookworm repositories. Use `openjdk-17-jdk` instead — the project
 > compiles to Java 11 bytecode (`<release>11</release>`) and runs on any JVM ≥ 11.
 
-> **Note for DietPi:** Neither `openjdk-11-jdk` nor `openjdk-17-jdk` are available
-> via `apt` on DietPi. Use `dietpi-software` (Software ID **196**) to install Java 17:
+> **Note for DietPi (Trixie / Debian 13):** `openjdk-11-jdk` and `openjdk-17-jdk` are not
+> available in the Trixie repositories. Use `default-jdk` which installs OpenJDK 21:
 > ```
-> sudo dietpi-software install 196
+> sudo apt install default-jdk maven
 > ```
-> Maven is not included — install it separately:
-> ```
-> sudo apt install maven
-> ```
-> If `maven` is also unavailable, download it manually from https://maven.apache.org/download.cgi
-> and add it to your `PATH`.
 
 ## Build
 To customize and build it yourself, build a new jar with maven:
@@ -92,19 +86,19 @@ java -jar target/ha-bridge-5.4.1-java11.jar
 Next gen Linux systems (this includes the Raspberry Pi), use systemd to run and manage services.
 Here is a link on how to use systemd: https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units
 
-Create the directory and make sure that ha-bridge-5.4.1.jar is in your /home/pi/ha-bridge directory.
+Create the directory and make sure that ha-bridge-5.4.1.jar is in your /home/dietpi/ha-bridge directory.
 
 ```
-pi@raspberrypi:~ $ mkdir ha-bridge
-pi@raspberrypi:~ $ cd ha-bridge
+dietpi@dietpi:~ $ mkdir ha-bridge
+dietpi@dietpi:~ $ cd ha-bridge
 
-pi@raspberrypi:~/ha-bridge $ wget https://github.com/bwssytems/ha-bridge/releases/download/v5.4.1/ha-bridge-5.4.1.jar
+dietpi@dietpi:~/ha-bridge $ wget https://github.com/bwssytems/ha-bridge/releases/download/v5.4.1/ha-bridge-5.4.1.jar
 ```
 
 Create the ha-bridge.service unit file:
 ```
-pi@raspberrypi:~ $ cd /etc/systemd/system
-pi@raspberrypi:~ $ sudo nano ha-bridge.service
+dietpi@dietpi:~ $ cd /etc/systemd/system
+dietpi@dietpi:~ $ sudo nano ha-bridge.service
 ```
 Copy the text below into the editor nano.
 ```
@@ -117,8 +111,8 @@ After=network-online.target
 Type=simple
 Restart=on-failure
 
-WorkingDirectory=/home/pi/ha-bridge
-ExecStart=/usr/bin/java -jar -Dconfig.file=/home/pi/ha-bridge/data/habridge.config /home/pi/ha-bridge/ha-bridge-5.4.1.jar
+WorkingDirectory=/home/dietpi/ha-bridge
+ExecStart=/usr/bin/java -jar -Dconfig.file=/home/dietpi/ha-bridge/data/habridge.config /home/dietpi/ha-bridge/ha-bridge-5.4.1.jar
 
 [Install]
 WantedBy=multi-user.target
@@ -128,22 +122,22 @@ Save the file in the editor by hitting CTL-X and then saying Y to update and sav
 
 Reload the system control config:
 ```
-pi@raspberrypi:~ $ sudo systemctl daemon-reload
+dietpi@dietpi:~ $ sudo systemctl daemon-reload
 ```
 
 To start the bridge:
 ```
-pi@raspberrypi:~ $ sudo systemctl start ha-bridge.service
+dietpi@dietpi:~ $ sudo systemctl start ha-bridge.service
 ```
 
 To start the service at boot, use the `enable` command:
 ```
-pi@raspberrypi:~ $ sudo systemctl enable ha-bridge.service
+dietpi@dietpi:~ $ sudo systemctl enable ha-bridge.service
 ```
 
 To look at the log, the output goes into the system log at `/var/log/syslog':
 ```
-pi@raspberrypi:~ $ tail -f /var/log/syslog
+dietpi@dietpi:~ $ tail -f /var/log/syslog
 ```
 
 ### ha-bridge inside Docker container
@@ -154,20 +148,20 @@ without separate architecture-specific images.
 
 Install Docker and build the image:
 ```
-pi@raspberrypi:~ $ curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
-pi@raspberrypi:~/ha-bridge $ mvn package -DskipTests
-pi@raspberrypi:~/ha-bridge $ docker build -t ha-bridge .
+dietpi@dietpi:~ $ curl -fsSL get.docker.com -o get-docker.sh && sudo sh get-docker.sh
+dietpi@dietpi:~/ha-bridge $ mvn package -DskipTests
+dietpi@dietpi:~/ha-bridge $ docker build -t ha-bridge .
 ```
 
 **Option A – docker-compose (recommended)**
 ```
-pi@raspberrypi:~/ha-bridge $ docker compose up -d
+dietpi@dietpi:~/ha-bridge $ docker compose up -d
 ```
 Config and device data are stored in `./data/` on the host.
 
 **Option B – plain docker run**
 ```
-pi@raspberrypi:~ $ docker run \
+dietpi@dietpi:~ $ docker run \
     --name ha-bridge \
     --detach \
     --net=host \
@@ -184,7 +178,7 @@ To pass additional JVM or ha-bridge arguments append them after the image name:
 
 To stop the container:
 ```
-pi@raspberrypi:~ $ docker stop ha-bridge
+dietpi@dietpi:~ $ docker stop ha-bridge
 ```
 
 ## Run ha-bridge alongside web server already on port 80

@@ -263,11 +263,18 @@
 										<include>**</include>
 									</includes>
 								</filter>
+								<filter>
+									<artifact>ch.qos.logback:*</artifact>
+									<includes>
+										<include>**</include>
+									</includes>
+								</filter>
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
 									<mainClass>com.bwssystems.HABridge.HABridge</mainClass>
 								</transformer>
+								<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
 							</transformers>
 						</configuration>
 					</execution>
