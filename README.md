@@ -37,7 +37,7 @@ A Custom implementation path looks like this:
 
 **ISSUE: Google Home does NOT support local connection to Philips Hue Hubs and requires that it connect to meethue.com. Since the ha-bridge only emulates the local API, and is not associated with Philips, this method will not work.**
 
-**FAQ: Please look here for the current FAQs! https://github.com/bwssytems/ha-bridge/wiki/HA-Bridge-FAQs**
+**FAQ: Please look here for the current FAQs! https://github.com/BattloXX/ha-bridge/wiki/HA-Bridge-FAQs**
 
 In the cases of systems that require authorization and/or have APIs that cannot be handled in the current method, a module may need to be built. The Harmony Hub is such a module and so is the Nest module. The Bridge has helpers to build devices for the gateway for the Logitech Harmony Hub, Vera, Vera Lite or Vera Edge, Nest, Somfy Tahoma, Home Assistant, Domoticz, MQTT, HAL, Fibaro, HomeWizard, LIFX, OpenHAB, FHEM, Broadlink, Mozilla IOT, HomeGenie and the ability to proxy all of your real Hue bridges behind this bridge.
 
@@ -71,7 +71,7 @@ To customize and build it yourself, build a new jar with maven:
 ```
 mvn package -DskipTests
 ```
-Otherwise, downloads are available at https://github.com/bwssytems/ha-bridge/releases.
+Otherwise, downloads are available at https://github.com/BattloXX/ha-bridge/releases.
 
 ## Run
 Then locate the jar and start the server with:
