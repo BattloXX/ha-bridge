@@ -5,6 +5,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -272,9 +273,9 @@ public class DeviceRepository extends BackupHandler {
 			Path target = null;
 			if (Files.exists(filePath)) {
 				target = FileSystems.getDefault().getPath(filePath.getParent().toString(), "device.db.old");
-				Files.move(filePath, target);
+				Files.copy(filePath, target, StandardCopyOption.REPLACE_EXISTING);
 			}
-			Files.write(filePath, content.getBytes(), StandardOpenOption.CREATE);
+			Files.write(filePath, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 			if (target != null)
 				Files.delete(target);
 		} catch (IOException e) {

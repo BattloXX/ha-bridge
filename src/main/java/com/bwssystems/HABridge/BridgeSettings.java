@@ -9,6 +9,7 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.PosixFilePermission;
 import java.security.GeneralSecurityException;
@@ -322,9 +323,9 @@ public class BridgeSettings extends BackupHandler {
 			Path target = null;
 			if(Files.exists(filePath)) {
 				target = FileSystems.getDefault().getPath(filePath.getParent().toString(), "habridge.config.old." + getCurrentDate());
-				Files.move(filePath, target);
+				Files.copy(filePath, target, StandardCopyOption.REPLACE_EXISTING);
 			}
-			Files.write(filePath, content.getBytes(), StandardOpenOption.CREATE);
+			Files.write(filePath, content.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
 
 			// set attributes to be for user only
 	        // using PosixFilePermission to set file permissions
