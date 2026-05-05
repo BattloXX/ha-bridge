@@ -81,7 +81,7 @@ public class NamedIP {
 	}
 
 	public String getHttpPreamble() {
-		if (httpPreamble == null || !httpPreamble.trim().isEmpty()) {
+		if (httpPreamble == null || httpPreamble.trim().isEmpty()) {
 			if (getSecure() != null && getSecure())
 				httpPreamble = "https://";
 			else
@@ -100,7 +100,7 @@ public class NamedIP {
 	}
 
 	public String getUserPass64() {
-		if (encodedLogin == null || !encodedLogin.trim().isEmpty()) {
+		if (encodedLogin == null || encodedLogin.trim().isEmpty()) {
 			if (getUsername() != null && !getUsername().isEmpty() && getPassword() != null
 					&& !getPassword().isEmpty()) {
 				String userPass = getUsername() + ":" + getPassword();

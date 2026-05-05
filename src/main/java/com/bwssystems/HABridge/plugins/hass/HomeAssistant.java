@@ -70,14 +70,9 @@ public class HomeAssistant {
 	public List<State> getDevices() {
 		List<State> theDeviceStates = null;
 		State[] theHassStates;
-		String theUrl = null;
 		String theData;
 		headers = getAuthHeader();
-		if (hassAddress.getSecure() != null && hassAddress.getSecure())
-			theUrl = "https";
-		else
-			theUrl = "http";
-		theUrl = theUrl + "://" + hassAddress.getIp() + ":" + hassAddress.getPort() + "/api/states";
+		String theUrl = hassAddress.getHttpPreamble() + "/api/states";
 		theData = anHttpHandler.doHttpRequest(theUrl, HttpGet.METHOD_NAME, "application/json", null, headers);
 		if (theData != null) {
 			log.debug("GET Hass States - data: " + theData);
@@ -121,6 +116,7 @@ public class HomeAssistant {
 				headers = new NameValue[2];
 				headers[0] = new NameValue();
 				if (isLegacyAuth()) {
+					log.warn("HomeAssistant '{}': x-ha-access (legacy auth) was removed in HA 2023.4 — use a Long-Lived Access Token instead.", hassAddress.getName());
 					headers[0].setName("x-ha-access");
 					headers[0].setValue(hassAddress.getPassword());
 				} else {
