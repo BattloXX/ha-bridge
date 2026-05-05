@@ -1,17 +1,20 @@
-# Refactoring Plan: ha-bridge → Go (LoxBerry Plugin)
+# EchoLox — Refactoring Plan (LoxBerry Plugin)
+
+> Nachfolger von EchoLox. Neuer Name: **EchoLox**.  
+> Repository: `BattloXX/EchoLox` (wird umbenannt nach `BattloXX/EchoLox`)
 
 ## Vision
 
-ha-bridge wird als **LoxBerry Plugin** neu entwickelt:  
-Alexa spricht mit ha-bridge (Hue-Emulation) → ha-bridge sendet Kommandos direkt an den **Loxone Miniserver** (HTTP oder UDP) → Loxone steuert die echten Geräte.
+EchoLox wird als **LoxBerry Plugin** entwickelt:  
+Alexa spricht mit EchoLox (Hue-Emulation) → EchoLox sendet Kommandos direkt an den **Loxone Miniserver** (HTTP oder UDP) → Loxone steuert die echten Geräte.
 
-Loxone bleibt die einzige Automations-Zentrale. ha-bridge ist nur die Brücke zwischen Alexa und Loxone's Virtual Inputs.
+Loxone bleibt die einzige Automations-Zentrale. EchoLox ist nur die Brücke zwischen Alexa und Loxone's Virtual Inputs.
 
 ```
 Alexa
   │  Hue API (Port 8083)
   ▼
-ha-bridge (LoxBerry Plugin)
+EchoLox (LoxBerry Plugin)
   │  HTTP GET  /dev/sps/io/{name}/{value}   (Basic Auth)
   │  oder UDP  {name}={value}\r\n
   ▼
@@ -93,14 +96,14 @@ Ziel: `{miniserver-ip}:{udp-port}` (konfigurierbar, Default 7777)
 
 ### MQTT-Transport (via LoxBerry MQTT Gateway)
 
-ha-bridge published auf MQTT-Topics. Das bereits im LoxBerry integrierte MQTT Gateway leitet an den Miniserver weiter:
+EchoLox published auf MQTT-Topics. Das bereits im LoxBerry integrierte MQTT Gateway leitet an den Miniserver weiter:
 
 ```
 Topic:   ha_bridge/{device_name}/{property}
 Payload: {value}
 ```
 
-ha-bridge registriert beim Speichern eines Devices automatisch die nötige Subscription im MQTT-Gateway-Config (`/opt/loxberry/config/plugins/mqttgateway/...`).
+EchoLox registriert beim Speichern eines Devices automatisch die nötige Subscription im MQTT-Gateway-Config (`/opt/loxberry/config/plugins/mqttgateway/...`).
 
 ---
 
@@ -133,7 +136,7 @@ Beispiel: `"Wohnzimmer Licht"` → `wohnzimmer_licht`
 Hue API → PUT /api/{user}/lights/{id}/state
          { "on": true, "bri": 153 }
 
-ha-bridge sendet:
+EchoLox sendet:
   GET .../dev/sps/io/ha_wohnzimmer_licht_on/1
   GET .../dev/sps/io/ha_wohnzimmer_licht_brightness/60
 ```
@@ -142,13 +145,13 @@ ha-bridge sendet:
 
 ## Loxone Virtual Input — Verifikation
 
-Nach dem Anlegen eines Devices prüft ha-bridge automatisch, ob die Virtual Inputs im Miniserver existieren. Dazu wird die Loxone Struktur-API abgefragt:
+Nach dem Anlegen eines Devices prüft EchoLox automatisch, ob die Virtual Inputs im Miniserver existieren. Dazu wird die Loxone Struktur-API abgefragt:
 
 ```
 GET http://{miniserver}/data/LoxAPP3.json
 ```
 
-Die Antwort enthält alle konfigurierten Blöcke inkl. Virtual Inputs. ha-bridge vergleicht die generierten Namen mit den tatsächlich konfigurierten Inputs.
+Die Antwort enthält alle konfigurierten Blöcke inkl. Virtual Inputs. EchoLox vergleicht die generierten Namen mit den tatsächlich konfigurierten Inputs.
 
 ### Status-Anzeige (wie MQTT Gateway)
 
@@ -178,7 +181,7 @@ Die Statusseite zeigt alle Virtual Inputs mit letztem Wert und Zeitstempel:
 
 ## Web-Oberfläche
 
-Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webserver nötig für die ha-bridge-Verwaltung).
+Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webserver nötig für die EchoLox-Verwaltung).
 
 ### Seiten
 
@@ -204,11 +207,11 @@ Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webser
 - Benutzername + Passwort (Loxone)
 - Transport-Standard: HTTP / UDP / MQTT
 - UDP-Port (Default 7777)
-- ha-bridge Port (Default 8083)
+- EchoLox Port (Default 8083)
 - MQTT-Broker (wenn MQTT-Transport gewählt)
 - Verbindungstest-Button
 
-#### 5. Import (`/ui/import`) — Alte ha-bridge Konfiguration
+#### 5. Import (`/ui/import`) — Alte EchoLox Konfiguration
 - Datei-Upload: `devices.db` (alte JSON-Datenbank)
 - Vorschau-Tabelle: alter Name → neuer Virtual-Input-Name
 - Warnungen für platform-spezifische Devices (Vera, Fibaro, …) — werden übersprungen
@@ -224,7 +227,7 @@ Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webser
 ```
 1. Benutzer öffnet /ui/import
 2. Lädt devices.db hoch (Drag & Drop oder Datei-Dialog)
-3. ha-bridge parst die Datei und zeigt Vorschau:
+3. EchoLox parst die Datei und zeigt Vorschau:
 
    ┌───────────────────────────────┬──────────────────────────────┬────────┐
    │ Alter Name                    │ Neue Virtual Inputs           │ Status │
@@ -242,9 +245,9 @@ Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webser
 ### CLI-Import (alternativ)
 
 ```bash
-ha-bridge import \
+EchoLox import \
   --from /pfad/zur/alten/devices.db \
-  --out  /opt/loxberry/data/plugins/ha-bridge/devices/
+  --out  /opt/loxberry/data/plugins/EchoLox/devices/
 ```
 
 ### Mapping-Logik
@@ -265,8 +268,8 @@ ha-bridge import \
 ## Projektstruktur (Go)
 
 ```
-ha-bridge/
-├── cmd/ha-bridge/
+EchoLox/
+├── cmd/EchoLox/
 │   └── main.go                   # Entry point, flag parsing
 ├── internal/
 │   ├── bridge/
@@ -326,23 +329,60 @@ ha-bridge/
 
 ---
 
+## Globaler LoxBerry Miniserver
+
+EchoLox verwendet **keinen eigenen Miniserver-Konfigurationsblock**. Stattdessen wird die globale LoxBerry-Miniserver-Konfiguration gelesen:
+
+```
+/opt/loxberry/config/system/miniserver.json
+```
+
+Go-Code zum Einlesen:
+
+```go
+// internal/loxone/lbconfig.go
+
+type LBMiniserver struct {
+    Name      string `json:"Name"`
+    IPAddress string `json:"IPAddress"`
+    Port      string `json:"Port"`
+    Admin     string `json:"Admin"`
+    Pass      string `json:"Pass"`
+}
+
+func ReadLoxBerryMiniservers() (map[string]LBMiniserver, error) {
+    // LBSCFG = /opt/loxberry/config/system
+    path := filepath.Join(os.Getenv("LBSCFG"), "miniserver.json")
+    data, err := os.ReadFile(path)
+    if err != nil {
+        return nil, err
+    }
+    var result struct {
+        Miniserver map[string]LBMiniserver `json:"Miniserver"`
+    }
+    return result.Miniserver, json.Unmarshal(data, &result)
+}
+```
+
+In den Einstellungen (`/ui/settings`) gibt es nur ein **Dropdown zur Miniserver-Auswahl** (relevant wenn mehrere Miniserver in LoxBerry konfiguriert sind). Credentials werden nie doppelt eingegeben.
+
+---
+
 ## Konfiguration
 
 ```yaml
-# /opt/loxberry/config/plugins/ha-bridge/ha-bridge.cfg
+# /opt/loxberry/config/plugins/EchoLox/echolox.cfg
 
 server:
   port: 8083
   ip: ""              # leer = auto-detect
 
 upnp:
-  name: "HA Bridge"
+  name: "EchoLox"
   uuid: ""            # leer = auto-generiert, dann gespeichert
 
 loxone:
-  host: "192.168.1.7"
-  user: "admin"
-  password: "secret"
+  miniserver: "1"     # ID aus LoxBerry miniserver.json (Default: erster Eintrag)
   transport: "http"   # http | udp | mqtt
   udp_port: 7777
 
@@ -361,7 +401,7 @@ data_dir: ""          # leer = $LBPDATA aus LoxBerry-Umgebung
 ### Verzeichnisstruktur
 
 ```
-ha-bridge/                         ← ZIP-Root (Paketname)
+EchoLox/                         ← ZIP-Root (Paketname)
 ├── plugin.cfg
 ├── preinstall.sh
 ├── postinstall.sh
@@ -369,20 +409,20 @@ ha-bridge/                         ← ZIP-Root (Paketname)
 ├── postroot.sh                    ← Architektur-Detection, Binary setzen
 ├── postupgrade.sh
 ├── bin/
-│   ├── ha-bridge-arm64            ← Cross-compiled Binaries
-│   ├── ha-bridge-armv7
-│   ├── ha-bridge-amd64
+│   ├── EchoLox-arm64            ← Cross-compiled Binaries
+│   ├── EchoLox-armv7
+│   ├── EchoLox-amd64
 │   └── start.sh
 ├── config/
-│   └── ha-bridge.cfg              ← Default-Konfiguration
+│   └── EchoLox.cfg              ← Default-Konfiguration
 ├── daemon/
-│   └── ha-bridge                  ← Init-Script (start/stop/status/restart)
+│   └── EchoLox                  ← Init-Script (start/stop/status/restart)
 ├── webfrontend/
 │   └── htmlauth/
-│       └── index.php              ← LoxBerry Nav-Wrapper → iframe zur ha-bridge UI
+│       └── index.php              ← LoxBerry Nav-Wrapper → iframe zur EchoLox UI
 ├── icons/
-│   ├── ha-bridge.png
-│   └── ha-bridge_icon.png
+│   ├── EchoLox.png
+│   └── EchoLox_icon.png
 └── dpkg/
     └── apt                        ← leer (Go-Binary hat keine Deps)
 ```
@@ -391,12 +431,12 @@ ha-bridge/                         ← ZIP-Root (Paketname)
 
 | Plugin-Dir | Installiert nach |
 |---|---|
-| `bin/` | `/opt/loxberry/bin/plugins/ha-bridge/` |
-| `config/` | `/opt/loxberry/config/plugins/ha-bridge/` |
-| `data/` | `/opt/loxberry/data/plugins/ha-bridge/` |
-| `log/` | `/opt/loxberry/log/plugins/ha-bridge/` |
+| `bin/` | `/opt/loxberry/bin/plugins/EchoLox/` |
+| `config/` | `/opt/loxberry/config/plugins/EchoLox/` |
+| `data/` | `/opt/loxberry/data/plugins/EchoLox/` |
+| `log/` | `/opt/loxberry/log/plugins/EchoLox/` |
 | `daemon/` | Init-Script, wird beim Boot ausgeführt |
-| `webfrontend/htmlauth/` | `/opt/loxberry/webfrontend/htmlauth/plugins/ha-bridge/` |
+| `webfrontend/htmlauth/` | `/opt/loxberry/webfrontend/htmlauth/plugins/EchoLox/` |
 
 ### plugin.cfg
 
@@ -407,12 +447,12 @@ EMAIL = johannes@battlogg.org
 
 [PLUGIN]
 VERSION = 1.0.0
-NAME = ha-bridge
-FOLDER = ha-bridge
+NAME = EchoLox
+FOLDER = EchoLox
 TITLE = HA Bridge (Hue → Loxone)
 
 [AUTOUPDATE]
-RELEASECFG = https://raw.githubusercontent.com/BattloXX/ha-bridge/master/release.cfg
+RELEASECFG = https://raw.githubusercontent.com/BattloXX/EchoLox/master/release.cfg
 
 [SYSTEM]
 REBOOT = false
@@ -425,39 +465,39 @@ INTERFACE = 2.0
 
 ```bash
 #!/bin/bash
-BINDIR="$LBHOMEDIR/bin/plugins/ha-bridge"
+BINDIR="$LBHOMEDIR/bin/plugins/EchoLox"
 ARCH=$(uname -m)
 
 case "$ARCH" in
-  aarch64) cp "$BINDIR/ha-bridge-arm64" "$BINDIR/ha-bridge" ;;
-  armv7l)  cp "$BINDIR/ha-bridge-armv7" "$BINDIR/ha-bridge" ;;
-  x86_64)  cp "$BINDIR/ha-bridge-amd64" "$BINDIR/ha-bridge" ;;
+  aarch64) cp "$BINDIR/EchoLox-arm64" "$BINDIR/EchoLox" ;;
+  armv7l)  cp "$BINDIR/EchoLox-armv7" "$BINDIR/EchoLox" ;;
+  x86_64)  cp "$BINDIR/EchoLox-amd64" "$BINDIR/EchoLox" ;;
   *) echo "<FAIL> Unsupported architecture: $ARCH"; exit 2 ;;
 esac
 
-chmod +x "$BINDIR/ha-bridge"
+chmod +x "$BINDIR/EchoLox"
 exit 0
 ```
 
-### daemon/ha-bridge — Init-Script
+### daemon/EchoLox — Init-Script
 
 ```bash
 #!/bin/bash
 LBHOMEDIR="/opt/loxberry"
-BINARY="$LBHOMEDIR/bin/plugins/ha-bridge/ha-bridge"
-CFGFILE="$LBHOMEDIR/config/plugins/ha-bridge/ha-bridge.cfg"
-PIDFILE="/var/run/ha-bridge.pid"
+BINARY="$LBHOMEDIR/bin/plugins/EchoLox/EchoLox"
+CFGFILE="$LBHOMEDIR/config/plugins/EchoLox/EchoLox.cfg"
+PIDFILE="/var/run/EchoLox.pid"
 
 case "$1" in
   start)
     "$BINARY" --config "$CFGFILE" &
     echo $! > "$PIDFILE"
-    echo "<OK> ha-bridge started (PID $(cat $PIDFILE))"
+    echo "<OK> EchoLox started (PID $(cat $PIDFILE))"
     ;;
   stop)
     if [ -f "$PIDFILE" ]; then
       kill $(cat "$PIDFILE") && rm "$PIDFILE"
-      echo "<OK> ha-bridge stopped"
+      echo "<OK> EchoLox stopped"
     fi
     ;;
   status)
@@ -477,12 +517,12 @@ esac
 require_once "loxberry_web.php";
 
 $cfg  = parse_ini_file(
-  $ENV['LBPCFG'] . "/ha-bridge.cfg", true
+  $ENV['LBPCFG'] . "/EchoLox.cfg", true
 );
 $port = $cfg['server']['port'] ?? 8083;
 $host = $_SERVER['HTTP_HOST'];
 
-lbheader("HA Bridge", "ha-bridge", "");
+lbheader("HA Bridge", "EchoLox", "");
 ?>
 <iframe
   src="http://<?= htmlspecialchars($host) ?>:<?= (int)$port ?>/ui/"
@@ -535,14 +575,14 @@ Phase 1 ist das höchste Risiko: SSDP-Pakete und Hue-API-Response müssen exakt 
 
 ```bash
 # arm64 (Raspberry Pi 4, Orange Pi)
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/ha-bridge-arm64 ./cmd/ha-bridge
+GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/EchoLox-arm64 ./cmd/EchoLox
 
 # armv7 (Raspberry Pi 2/3, 32-bit)
-GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/ha-bridge-armv7 ./cmd/ha-bridge
+GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/EchoLox-armv7 ./cmd/EchoLox
 
 # amd64 (x86 DietPi VM)
-GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/ha-bridge-amd64 ./cmd/ha-bridge
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/EchoLox-amd64 ./cmd/EchoLox
 
 # Plugin-ZIP erstellen
-zip -r ha-bridge-1.0.0.zip ha-bridge/
+zip -r EchoLox-1.0.0.zip EchoLox/
 ```
