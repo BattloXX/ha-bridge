@@ -1,249 +1,548 @@
-# Refactoring Plan: ha-bridge → Go
+# Refactoring Plan: ha-bridge → Go (LoxBerry Plugin)
 
-## Motivation
+## Vision
 
-The current Java implementation has significant drawbacks for resource-constrained Linux targets like DietPi:
+ha-bridge wird als **LoxBerry Plugin** neu entwickelt:  
+Alexa spricht mit ha-bridge (Hue-Emulation) → ha-bridge sendet Kommandos direkt an den **Loxone Miniserver** (HTTP oder UDP) → Loxone steuert die echten Geräte.
 
-| Criteria | Java (current) | Go (proposed) |
+Loxone bleibt die einzige Automations-Zentrale. ha-bridge ist nur die Brücke zwischen Alexa und Loxone's Virtual Inputs.
+
+```
+Alexa
+  │  Hue API (Port 8083)
+  ▼
+ha-bridge (LoxBerry Plugin)
+  │  HTTP GET  /dev/sps/io/{name}/{value}   (Basic Auth)
+  │  oder UDP  {name}={value}\r\n
+  ▼
+Loxone Miniserver
+  │  Virtual Inputs → Logik-Blöcke
+  ▼
+Echte Geräte (Lampen, Rolläden, Szenen, …)
+```
+
+---
+
+## Motivation: Warum Go statt Java?
+
+| Kriterium | Java (aktuell) | Go (neu) |
 |---|---|---|
-| RAM usage | ~150–300 MB (JVM overhead) | ~10–20 MB |
-| Deployment | JAR + JRE installation required | Single static binary, zero dependencies |
-| DietPi suitability | Poor (JVM startup, memory) | Excellent |
-| ARM build | JRE must be installed | `GOOS=linux GOARCH=arm64 go build` |
-| Startup time | 3–8 seconds | <100 ms |
-| Binary size | JRE ~200 MB | ~10 MB binary |
-
-**Goals:**
-- No Java / JVM requirement
-- Runs on Linux (DietPi / Raspberry Pi / Orange Pi)
-- No backwards compatibility — clean slate
-- One-shot import tool for existing `devices.db` configs
+| RAM-Verbrauch | ~150–300 MB (JVM) | ~10–20 MB |
+| Deployment | JAR + JRE installieren | Einzelnes Binary, keine Deps |
+| DietPi / Raspberry Pi | schlecht (JVM-Overhead) | ausgezeichnet |
+| ARM-Build | JRE muss installiert sein | `GOOS=linux GOARCH=arm64 go build` |
+| Startup-Zeit | 3–8 Sekunden | <100 ms |
 
 ---
 
-## What stays, what goes
+## Was bleibt, was fliegt
 
-### Kept
-- UPnP/SSDP discovery (Alexa device detection)
-- Philips Hue API emulation (`/api/{userId}/lights`, `/api/{userId}/groups`)
-- Device CRUD REST API
-- Executors: HTTP/HTTPS, MQTT, TCP, UDP, Shell/Script
-- Web UI (embedded in binary via Go `embed`)
-- Variable substitution (`${intensity.percent}`, `${color.r}`, etc.)
-- Config import from old `devices.db`
+### Behalten
+- UPnP/SSDP Discovery (Alexa-Erkennung)
+- Philips Hue API-Emulation (`/api/{userId}/lights`, `/api/{userId}/groups`)
+- Device CRUD REST-API
+- Variable-Substitution (`${intensity.percent}`, `${color.r}`, etc.)
+- Import-Tool für alte `devices.db`
 
-### Removed
-- All platform-specific handlers (Vera, Fibaro, Harmony Hub, LIFX, Nest, Domoticz, etc.)
-  — Modern systems (Home Assistant, OpenHAB 3+, etc.) all expose HTTP/MQTT APIs; direct calls suffice
-- XMPP / Smack library
-- Complex authentication / Google Guice DI
-- Hue Groups complexity (Alexa scenes handle grouping)
+### Weggeworfen
+- Alle generischen Executors (HTTP zu Drittgeräten, MQTT, TCP, UDP zu Drittgeräten)
+- Alle platform-spezifischen Handler (Vera, Fibaro, Harmony, LIFX, Nest, …)
+- XMPP, Guice DI, komplexe Auth
+- Generische Hue Groups
+
+### Neu
+- **Loxone-Transport**: HTTP und UDP direkt zum Miniserver
+- **Auto Virtual-Input-Namen**: beim Anlegen eines Devices werden Loxone-Namen automatisch generiert
+- **Loxone-Verifikation**: prüft ob Virtual Inputs im Miniserver existieren (wie MQTT Gateway Status-Ansicht)
+- **MQTT-Gateway-Integration**: optionale Auto-Registrierung von Subscriptions im LoxBerry MQTT Gateway
+- **Import-Web-UI**: alte `devices.db` hochladen, Mapping prüfen, übernehmen
+- **LoxBerry Plugin-Paket**: korrekte Struktur mit Daemon, Install-Hooks, Web-Frontend
 
 ---
 
-## Project Structure
+## Kommunikation mit dem Loxone Miniserver
+
+### HTTP-Transport
+
+Loxone Virtual HTTP Inputs akzeptieren GET-Requests:
+
+```
+GET http://{miniserver-ip}/dev/sps/io/{virtual_input_name}/{value}
+Authorization: Basic base64(user:password)
+```
+
+Beispiel — Lampe einschalten:
+```
+GET http://192.168.1.7/dev/sps/io/ha_wohnzimmer_licht_on/1
+```
+
+Beispiel — Helligkeit:
+```
+GET http://192.168.1.7/dev/sps/io/ha_wohnzimmer_licht_brightness/75
+```
+
+### UDP-Transport
+
+Loxone Virtual UDP Inputs empfangen UDP-Pakete:
+
+```
+{virtual_input_name}={value}\r\n
+```
+
+Ziel: `{miniserver-ip}:{udp-port}` (konfigurierbar, Default 7777)
+
+### MQTT-Transport (via LoxBerry MQTT Gateway)
+
+ha-bridge published auf MQTT-Topics. Das bereits im LoxBerry integrierte MQTT Gateway leitet an den Miniserver weiter:
+
+```
+Topic:   ha_bridge/{device_name}/{property}
+Payload: {value}
+```
+
+ha-bridge registriert beim Speichern eines Devices automatisch die nötige Subscription im MQTT-Gateway-Config (`/opt/loxberry/config/plugins/mqttgateway/...`).
+
+---
+
+## Auto-Generierung von Virtual-Input-Namen
+
+Beim Anlegen eines Devices werden automatisch alle nötigen Loxone Virtual Input Namen generiert.
+
+### Namenssschema
+
+```
+ha_{device_name_normalized}_{property}
+```
+
+`device_name_normalized`: Kleinbuchstaben, Umlaute ersetzt, Sonderzeichen → Unterstrich
+
+Beispiel: `"Wohnzimmer Licht"` → `wohnzimmer_licht`
+
+### Virtual Inputs nach Device-Typ
+
+| Device-Typ | Generierte Virtual Inputs | Wertebereich |
+|---|---|---|
+| `switch` | `ha_{name}_on` | `1` / `0` |
+| `dimmer` | `ha_{name}_on`, `ha_{name}_brightness` | `1`/`0`, `0–100` |
+| `color` | `ha_{name}_on`, `ha_{name}_brightness`, `ha_{name}_hue`, `ha_{name}_saturation` | diverse |
+| `scene` | `ha_{name}_activate` | `1` (Puls) |
+
+### Beispiel: Alexa sagt "Wohnzimmer Licht auf 60%"
+
+```
+Hue API → PUT /api/{user}/lights/{id}/state
+         { "on": true, "bri": 153 }
+
+ha-bridge sendet:
+  GET .../dev/sps/io/ha_wohnzimmer_licht_on/1
+  GET .../dev/sps/io/ha_wohnzimmer_licht_brightness/60
+```
+
+---
+
+## Loxone Virtual Input — Verifikation
+
+Nach dem Anlegen eines Devices prüft ha-bridge automatisch, ob die Virtual Inputs im Miniserver existieren. Dazu wird die Loxone Struktur-API abgefragt:
+
+```
+GET http://{miniserver}/data/LoxAPP3.json
+```
+
+Die Antwort enthält alle konfigurierten Blöcke inkl. Virtual Inputs. ha-bridge vergleicht die generierten Namen mit den tatsächlich konfigurierten Inputs.
+
+### Status-Anzeige (wie MQTT Gateway)
+
+Die Web-UI zeigt pro Device eine Statuszeile — analog zur MQTT-Gateway "Incoming Overview":
+
+| Status | Bedeutung |
+|---|---|
+| ✅ OK | Virtual Input existiert + hat kürzlich einen Wert empfangen |
+| 🟠 Not found | Name im Miniserver nicht gefunden — Erinnerung zum manuellen Anlegen |
+| 🔴 Access denied | Falsche Credentials für den Miniserver |
+| ⬜ Not sent yet | Device noch nie ausgelöst worden |
+
+Die Statusseite zeigt alle Virtual Inputs mit letztem Wert und Zeitstempel:
+
+```
+┌──────────────────────────────────────┬──────────────┬─────────────────┐
+│ Loxone Virtual Input Name            │ Letzter Wert │ Zuletzt gesendet│
+├──────────────────────────────────────┼──────────────┼─────────────────┤
+│ ✅ ha_wohnzimmer_licht_on            │ 1            │ 05.05. 22:14:03 │
+│ ✅ ha_wohnzimmer_licht_brightness    │ 60           │ 05.05. 22:14:03 │
+│ 🟠 ha_schlafzimmer_decke_on          │ —            │ nie             │
+│ ⬜ ha_terrasse_szene_activate        │ —            │ nie             │
+└──────────────────────────────────────┴──────────────┴─────────────────┘
+```
+
+---
+
+## Web-Oberfläche
+
+Das Go-Binary bettet die gesamte Web-UI via `embed.FS` ein (kein externer Webserver nötig für die ha-bridge-Verwaltung).
+
+### Seiten
+
+#### 1. Geräteübersicht (`/ui/`)
+- Liste aller konfigurierten Devices
+- Inline-Status (✅ / 🟠 / 🔴) für jeden Virtual Input
+- Buttons: Bearbeiten, Löschen, Testen (einmaliger Puls)
+
+#### 2. Gerät anlegen / bearbeiten (`/ui/device`)
+- Felder: Name, Typ (switch / dimmer / color / scene)
+- Automatisch generierte Virtual Input Namen werden live angezeigt
+- Transport wählbar: HTTP / UDP / MQTT
+- Testbutton: sendet sofort einen Wert an den Miniserver
+
+#### 3. Loxone Status-Übersicht (`/ui/status`) — wie MQTT Gateway Screenshot
+- Tabelle aller Virtual Inputs mit Status, letztem Wert, Zeitstempel
+- Filter-Buttons: Alle / OK / Not found / Access denied / Not sent yet
+- Suchfeld
+- „Refresh"-Button → fragt Loxone-Struktur neu ab
+
+#### 4. Einstellungen (`/ui/settings`)
+- Miniserver IP/Hostname
+- Benutzername + Passwort (Loxone)
+- Transport-Standard: HTTP / UDP / MQTT
+- UDP-Port (Default 7777)
+- ha-bridge Port (Default 8083)
+- MQTT-Broker (wenn MQTT-Transport gewählt)
+- Verbindungstest-Button
+
+#### 5. Import (`/ui/import`) — Alte ha-bridge Konfiguration
+- Datei-Upload: `devices.db` (alte JSON-Datenbank)
+- Vorschau-Tabelle: alter Name → neuer Virtual-Input-Name
+- Warnungen für platform-spezifische Devices (Vera, Fibaro, …) — werden übersprungen
+- „Importieren"-Button: übernimmt alle validen Devices
+- Download-Link: exportiert die neue Konfiguration als JSON
+
+---
+
+## Import-Tool für alte Konfiguration
+
+### Web-UI Upload-Flow
+
+```
+1. Benutzer öffnet /ui/import
+2. Lädt devices.db hoch (Drag & Drop oder Datei-Dialog)
+3. ha-bridge parst die Datei und zeigt Vorschau:
+
+   ┌───────────────────────────────┬──────────────────────────────┬────────┐
+   │ Alter Name                    │ Neue Virtual Inputs           │ Status │
+   ├───────────────────────────────┼──────────────────────────────┼────────┤
+   │ Living Room Light (http)      │ ha_living_room_light_on      │ ✅ OK  │
+   │                               │ ha_living_room_light_bright. │        │
+   ├───────────────────────────────┼──────────────────────────────┼────────┤
+   │ Vera Scene 1 (vera)           │ —                            │ ⚠️ Skip│
+   └───────────────────────────────┴──────────────────────────────┴────────┘
+
+4. Benutzer kann Namen manuell anpassen
+5. Klick „Importieren" → Devices werden gespeichert
+```
+
+### CLI-Import (alternativ)
+
+```bash
+ha-bridge import \
+  --from /pfad/zur/alten/devices.db \
+  --out  /opt/loxberry/data/plugins/ha-bridge/devices/
+```
+
+### Mapping-Logik
+
+| Alter Typ | Neues Device | Hinweis |
+|---|---|---|
+| `httpDevice` (on/off URL) | `switch` | Virtual Inputs: `_on` |
+| `httpDevice` (mit dimUrl) | `dimmer` | Virtual Inputs: `_on`, `_brightness` |
+| `mqttDevice` | `switch` / `dimmer` | je nach URLs |
+| `execDevice` | `switch` | Exec-Logik entfällt — Loxone übernimmt |
+| `tcpDevice` | `switch` | TCP-Logik entfällt |
+| `veraDevice` | — | Übersprungen, Warnung |
+| `harmonyDevice` | — | Übersprungen, Warnung |
+| alle anderen Plattform-Typen | — | Übersprungen, Warnung |
+
+---
+
+## Projektstruktur (Go)
 
 ```
 ha-bridge/
 ├── cmd/ha-bridge/
-│   └── main.go                 # Entry point, flag parsing, service wiring
+│   └── main.go                   # Entry point, flag parsing
 ├── internal/
 │   ├── bridge/
-│   │   ├── bridge.go           # HTTP server init, graceful shutdown
-│   │   └── config.go           # YAML config loading, defaults
+│   │   ├── bridge.go             # HTTP-Server Init
+│   │   └── config.go             # YAML-Config, LoxBerry Env-Vars
 │   ├── hue/
-│   │   ├── api.go              # Hue REST endpoints (/api/{userId}/...)
-│   │   └── state.go            # In-memory device state (on/off/brightness/color)
+│   │   ├── api.go                # Hue REST Endpoints
+│   │   └── state.go              # Device State (on/bri/color)
 │   ├── upnp/
-│   │   └── listener.go         # SSDP UDP multicast, M-SEARCH response
+│   │   └── listener.go           # SSDP UDP Multicast
 │   ├── device/
-│   │   ├── manager.go          # Device registry, dispatch to executors
-│   │   ├── store.go            # JSON persistence (one file per device)
-│   │   └── model.go            # Device / Action types
-│   ├── executor/
-│   │   ├── executor.go         # Interface + variable substitution engine
-│   │   ├── http.go             # HTTP/HTTPS with header and body support
-│   │   ├── mqtt.go             # MQTT publish (paho)
-│   │   ├── tcp.go              # Raw TCP send
-│   │   ├── udp.go              # Raw UDP send
-│   │   └── exec.go             # Shell command execution
+│   │   ├── manager.go            # Device Registry
+│   │   ├── store.go              # JSON Persistenz
+│   │   ├── model.go              # Device / VirtualInput Typen
+│   │   └── naming.go             # Auto-Namens-Generierung
+│   ├── loxone/
+│   │   ├── client.go             # HTTP + UDP Transport
+│   │   ├── verify.go             # LoxAPP3.json Abfrage, Status-Check
+│   │   └── mqttbridge.go         # MQTT-Gateway Config Auto-Registrierung
 │   ├── api/
-│   │   └── handler.go          # Management REST API (/api/devices CRUD)
-│   └── migrate/
-│       └── importer.go         # Import old ha-bridge devices.db → new format
-└── web/                        # Embedded frontend (Go embed.FS)
-    ├── index.html
-    └── app.js
+│   │   └── handler.go            # Management REST API (/api/devices)
+│   ├── migrate/
+│   │   └── importer.go           # devices.db → neues Format
+│   └── web/
+│       └── handler.go            # Web-UI Handler (/ui/...)
+└── web/                          # Embedded Frontend (embed.FS)
+    ├── index.html                # Geräteübersicht
+    ├── device.html               # Anlegen / Bearbeiten
+    ├── status.html               # Virtual Input Status
+    ├── settings.html             # Einstellungen
+    ├── import.html               # Import-UI
+    └── assets/
+        ├── app.js
+        └── style.css
 ```
 
 ---
 
-## Device Format (new)
-
-Each device is stored as a single JSON file under `data_dir/`.
+## Neues Device-Format (JSON)
 
 ```json
 {
   "id": "550e8400-e29b-41d4-a716",
-  "name": "Living Room Light",
-  "type": "switch",
-  "on_action": {
-    "type": "http",
-    "method": "POST",
-    "url": "http://homeassistant.local:8123/api/services/light/turn_on",
-    "headers": { "Authorization": "Bearer ${HA_TOKEN}", "Content-Type": "application/json" },
-    "body": "{\"entity_id\": \"light.living_room\"}"
+  "name": "Wohnzimmer Licht",
+  "type": "dimmer",
+  "virtual_inputs": {
+    "on":         "ha_wohnzimmer_licht_on",
+    "brightness": "ha_wohnzimmer_licht_brightness"
   },
-  "off_action": {
-    "type": "http",
-    "method": "POST",
-    "url": "http://homeassistant.local:8123/api/services/light/turn_off",
-    "headers": { "Authorization": "Bearer ${HA_TOKEN}", "Content-Type": "application/json" },
-    "body": "{\"entity_id\": \"light.living_room\"}"
-  },
-  "dim_action": {
-    "type": "http",
-    "method": "POST",
-    "url": "http://homeassistant.local:8123/api/services/light/turn_on",
-    "headers": { "Authorization": "Bearer ${HA_TOKEN}", "Content-Type": "application/json" },
-    "body": "{\"entity_id\": \"light.living_room\", \"brightness_pct\": ${intensity.percent}}"
+  "transport": "http",
+  "last_sent": {
+    "ha_wohnzimmer_licht_on": { "value": "1", "at": "2026-05-05T22:14:03Z" },
+    "ha_wohnzimmer_licht_brightness": { "value": "60", "at": "2026-05-05T22:14:03Z" }
   }
 }
 ```
 
-**Supported executor types:** `http`, `mqtt`, `tcp`, `udp`, `exec`
-
-**Variable substitution (same as original):**
-- `${intensity.percent}` — brightness 0–100
-- `${intensity.byte}` — brightness 0–255
-- `${color.r}`, `${color.g}`, `${color.b}` — RGB values
-- `${color.hue}`, `${color.saturation}` — HSB values
-- `${device.name}` — device name
-- `${time.format(HH:mm:ss)}` — current time
-
 ---
 
-## Configuration
+## Konfiguration
 
 ```yaml
-# /etc/ha-bridge/config.yaml
+# /opt/loxberry/config/plugins/ha-bridge/ha-bridge.cfg
 
 server:
-  port: 80
-  ip: ""              # empty = auto-detect primary interface
+  port: 8083
+  ip: ""              # leer = auto-detect
 
 upnp:
   name: "HA Bridge"
-  uuid: ""            # empty = auto-generated on first start, then persisted
+  uuid: ""            # leer = auto-generiert, dann gespeichert
+
+loxone:
+  host: "192.168.1.7"
+  user: "admin"
+  password: "secret"
+  transport: "http"   # http | udp | mqtt
+  udp_port: 7777
 
 mqtt:
-  broker: ""          # e.g. tcp://localhost:1883
+  broker: "tcp://localhost:1883"   # nur bei transport: mqtt
   username: ""
   password: ""
 
-data_dir: "/etc/ha-bridge/devices"
+data_dir: ""          # leer = $LBPDATA aus LoxBerry-Umgebung
 ```
 
 ---
 
-## Migration / Import
+## LoxBerry Plugin-Paket
 
-```bash
-ha-bridge import \
-  --from /path/to/old/devices.db \
-  --out  /etc/ha-bridge/devices/
+### Verzeichnisstruktur
+
+```
+ha-bridge/                         ← ZIP-Root (Paketname)
+├── plugin.cfg
+├── preinstall.sh
+├── postinstall.sh
+├── preroot.sh
+├── postroot.sh                    ← Architektur-Detection, Binary setzen
+├── postupgrade.sh
+├── bin/
+│   ├── ha-bridge-arm64            ← Cross-compiled Binaries
+│   ├── ha-bridge-armv7
+│   ├── ha-bridge-amd64
+│   └── start.sh
+├── config/
+│   └── ha-bridge.cfg              ← Default-Konfiguration
+├── daemon/
+│   └── ha-bridge                  ← Init-Script (start/stop/status/restart)
+├── webfrontend/
+│   └── htmlauth/
+│       └── index.php              ← LoxBerry Nav-Wrapper → iframe zur ha-bridge UI
+├── icons/
+│   ├── ha-bridge.png
+│   └── ha-bridge_icon.png
+└── dpkg/
+    └── apt                        ← leer (Go-Binary hat keine Deps)
 ```
 
-**Mapping logic:**
+### Installationspfade
 
-| Old type | New type | Notes |
-|---|---|---|
-| `httpDevice` | `http` | 1:1 mapping |
-| `mqttDevice` | `mqtt` | 1:1 mapping |
-| `tcpDevice` | `tcp` | 1:1 mapping |
-| `udpDevice` | `udp` | 1:1 mapping |
-| `execDevice` | `exec` | 1:1 mapping |
-| `veraDevice` | `http` | URL reconstructed from Vera API; manual review needed |
-| `harmonyDevice` | `http` | Harmony HTTP API URL; manual review needed |
-| other platform | `http` | Placeholder URL with `# TODO` comment in name |
+| Plugin-Dir | Installiert nach |
+|---|---|
+| `bin/` | `/opt/loxberry/bin/plugins/ha-bridge/` |
+| `config/` | `/opt/loxberry/config/plugins/ha-bridge/` |
+| `data/` | `/opt/loxberry/data/plugins/ha-bridge/` |
+| `log/` | `/opt/loxberry/log/plugins/ha-bridge/` |
+| `daemon/` | Init-Script, wird beim Boot ausgeführt |
+| `webfrontend/htmlauth/` | `/opt/loxberry/webfrontend/htmlauth/plugins/ha-bridge/` |
 
-Output: one `{uuid}.json` per device, import summary printed to stdout.
-
----
-
-## DietPi Deployment
-
-### Build (on dev machine)
-
-```bash
-# For Raspberry Pi 4 / Orange Pi (64-bit ARM)
-GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o ha-bridge ./cmd/ha-bridge
-
-# For older Raspberry Pi / 32-bit ARM
-GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o ha-bridge ./cmd/ha-bridge
-```
-
-### Install on DietPi
-
-```bash
-sudo cp ha-bridge /usr/local/bin/
-sudo useradd -r -s /bin/false ha-bridge
-sudo mkdir -p /etc/ha-bridge/devices
-sudo chown -R ha-bridge:ha-bridge /etc/ha-bridge
-sudo cp config.yaml /etc/ha-bridge/
-```
-
-### systemd Service
+### plugin.cfg
 
 ```ini
-# /etc/systemd/system/ha-bridge.service
-[Unit]
-Description=HA Bridge (Hue Emulator)
-After=network-online.target
-Wants=network-online.target
+[AUTHOR]
+NAME = Johannes Battlogg
+EMAIL = johannes@battlogg.org
 
-[Service]
-ExecStart=/usr/local/bin/ha-bridge --config /etc/ha-bridge/config.yaml
-Restart=always
-RestartSec=5
-User=ha-bridge
-Group=ha-bridge
-AmbientCapabilities=CAP_NET_BIND_SERVICE
+[PLUGIN]
+VERSION = 1.0.0
+NAME = ha-bridge
+FOLDER = ha-bridge
+TITLE = HA Bridge (Hue → Loxone)
 
-[Install]
-WantedBy=multi-user.target
+[AUTOUPDATE]
+RELEASECFG = https://raw.githubusercontent.com/BattloXX/ha-bridge/master/release.cfg
+
+[SYSTEM]
+REBOOT = false
+LB_MINIMUM = 2.0.0
+ARCHITECTURES = rpi,x86
+INTERFACE = 2.0
 ```
+
+### postroot.sh — Architektur-Detection
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable --now ha-bridge
+#!/bin/bash
+BINDIR="$LBHOMEDIR/bin/plugins/ha-bridge"
+ARCH=$(uname -m)
+
+case "$ARCH" in
+  aarch64) cp "$BINDIR/ha-bridge-arm64" "$BINDIR/ha-bridge" ;;
+  armv7l)  cp "$BINDIR/ha-bridge-armv7" "$BINDIR/ha-bridge" ;;
+  x86_64)  cp "$BINDIR/ha-bridge-amd64" "$BINDIR/ha-bridge" ;;
+  *) echo "<FAIL> Unsupported architecture: $ARCH"; exit 2 ;;
+esac
+
+chmod +x "$BINDIR/ha-bridge"
+exit 0
+```
+
+### daemon/ha-bridge — Init-Script
+
+```bash
+#!/bin/bash
+LBHOMEDIR="/opt/loxberry"
+BINARY="$LBHOMEDIR/bin/plugins/ha-bridge/ha-bridge"
+CFGFILE="$LBHOMEDIR/config/plugins/ha-bridge/ha-bridge.cfg"
+PIDFILE="/var/run/ha-bridge.pid"
+
+case "$1" in
+  start)
+    "$BINARY" --config "$CFGFILE" &
+    echo $! > "$PIDFILE"
+    echo "<OK> ha-bridge started (PID $(cat $PIDFILE))"
+    ;;
+  stop)
+    if [ -f "$PIDFILE" ]; then
+      kill $(cat "$PIDFILE") && rm "$PIDFILE"
+      echo "<OK> ha-bridge stopped"
+    fi
+    ;;
+  status)
+    [ -f "$PIDFILE" ] && kill -0 $(cat "$PIDFILE") 2>/dev/null \
+      && echo "running" || echo "stopped"
+    ;;
+  restart)
+    $0 stop; sleep 1; $0 start
+    ;;
+esac
+```
+
+### webfrontend/htmlauth/index.php — LoxBerry Wrapper
+
+```php
+<?php
+require_once "loxberry_web.php";
+
+$cfg  = parse_ini_file(
+  $ENV['LBPCFG'] . "/ha-bridge.cfg", true
+);
+$port = $cfg['server']['port'] ?? 8083;
+$host = $_SERVER['HTTP_HOST'];
+
+lbheader("HA Bridge", "ha-bridge", "");
+?>
+<iframe
+  src="http://<?= htmlspecialchars($host) ?>:<?= (int)$port ?>/ui/"
+  style="width:100%;height:calc(100vh - 120px);border:none;">
+</iframe>
+<?php lbfooter(); ?>
+```
+
+### LoxBerry Umgebungsvariablen im Go-Code
+
+```go
+// internal/bridge/config.go
+func lbPath(envKey, fallback string) string {
+    if v := os.Getenv(envKey); v != "" {
+        return v
+    }
+    return fallback
+}
+
+var (
+    DataDir   = lbPath("LBPDATA",   "./data")
+    ConfigDir = lbPath("LBPCFG",    "./config")
+    LogDir    = lbPath("LBPLOG",    "./log")
+    BinDir    = lbPath("LBPBIN",    "./bin")
+)
 ```
 
 ---
 
-## Key Dependencies (Go modules)
+## Implementierungsphasen
 
-| Package | Purpose |
-|---|---|
-| `github.com/go-chi/chi/v5` | HTTP router |
-| `github.com/eclipse/paho.mqtt.golang` | MQTT client |
-| `github.com/google/uuid` | UUID generation |
-| `gopkg.in/yaml.v3` | YAML config parsing |
-| standard `net/http` | HTTP server |
-| standard `embed` | Embed web UI into binary |
+| Phase | Inhalt | Aufwand |
+|---|---|---|
+| 1 | UPnP/SSDP + Hue API Skeleton (Alexa erkennt Bridge) | 2–3 Tage |
+| 2 | Device Model, JSON-Store, Auto-Namens-Generierung | 1 Tag |
+| 3 | Loxone HTTP-Transport + UDP-Transport | 1–2 Tage |
+| 4 | Loxone Verifikation (LoxAPP3.json, Status-Anzeige) | 1 Tag |
+| 5 | Web-UI: Geräte, Status, Einstellungen | 2 Tage |
+| 6 | Web-UI: Import (Upload, Vorschau, Mapping) | 1 Tag |
+| 7 | MQTT-Gateway Auto-Registrierung | 0.5 Tage |
+| 8 | LoxBerry Plugin-Paket, Daemon, Install-Hooks | 0.5 Tage |
+| 9 | DietPi/Raspberry Pi Testing | 1 Tag |
+| **Gesamt** | | **~10–13 Tage** |
+
+Phase 1 ist das höchste Risiko: SSDP-Pakete und Hue-API-Response müssen exakt stimmen, damit Alexa die Bridge akzeptiert.
 
 ---
 
-## Implementation Phases
+## Build & Cross-Compilation
 
-| Phase | Scope | Estimated effort |
-|---|---|---|
-| 1 | UPnP/SSDP + Hue API skeleton (Alexa discovers bridge) | 2–3 days |
-| 2 | Device model, JSON store, management REST API | 1–2 days |
-| 3 | Executors: HTTP, MQTT, TCP, UDP, exec | 1–2 days |
-| 4 | Web UI (device list, add/edit/delete) | 1–2 days |
-| 5 | Migration / import tool | 0.5 days |
-| 6 | DietPi testing, systemd integration | 0.5–1 day |
-| **Total** | | **~7–10 days** |
+```bash
+# arm64 (Raspberry Pi 4, Orange Pi)
+GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o bin/ha-bridge-arm64 ./cmd/ha-bridge
 
-Phase 1 is the highest-risk item — the SSDP multicast responses and Hue API response format must exactly match what Alexa expects.
+# armv7 (Raspberry Pi 2/3, 32-bit)
+GOOS=linux GOARCH=arm GOARM=7 go build -ldflags="-s -w" -o bin/ha-bridge-armv7 ./cmd/ha-bridge
+
+# amd64 (x86 DietPi VM)
+GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o bin/ha-bridge-amd64 ./cmd/ha-bridge
+
+# Plugin-ZIP erstellen
+zip -r ha-bridge-1.0.0.zip ha-bridge/
+```
