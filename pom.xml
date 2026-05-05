@@ -222,6 +222,8 @@
 										<exclude>META-INF/*.txt</exclude>
 										<exclude>META-INF/maven/**</exclude>
 										<exclude>about_files/**</exclude>
+										<exclude>module-info.class</exclude>
+										<exclude>META-INF/versions/*/module-info.class</exclude>
 									</excludes>
 								</filter>
 								<filter>
