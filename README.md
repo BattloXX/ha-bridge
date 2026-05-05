@@ -79,20 +79,20 @@ Then locate the jar and start the server with:
 ATTENTION: Due to port 80 being the default, Linux restricts this to super user. Use the instructions below.
 
 ```
-java -jar target/ha-bridge-5.4.1-java11.jar
+java -jar target/ha-bridge-5.5.0.jar
 ```
 
 ## Manual installation of ha-bridge and setup of systemd service
 Next gen Linux systems (this includes the Raspberry Pi), use systemd to run and manage services.
 Here is a link on how to use systemd: https://www.digitalocean.com/community/tutorials/how-to-use-systemctl-to-manage-systemd-services-and-units
 
-Create the directory and make sure that ha-bridge-5.4.1.jar is in your /home/dietpi/ha-bridge directory.
+Create the directory and make sure that ha-bridge-5.5.0.jar is in your /home/dietpi/ha-bridge directory.
 
 ```
 dietpi@dietpi:~ $ mkdir ha-bridge
 dietpi@dietpi:~ $ cd ha-bridge
 
-dietpi@dietpi:~/ha-bridge $ wget https://github.com/bwssytems/ha-bridge/releases/download/v5.4.1/ha-bridge-5.4.1.jar
+dietpi@dietpi:~/ha-bridge $ wget https://github.com/BattloXX/ha-bridge/releases/download/v5.5.0/ha-bridge-5.5.0.jar
 ```
 
 Create the ha-bridge.service unit file:
@@ -112,7 +112,7 @@ Type=simple
 Restart=on-failure
 
 WorkingDirectory=/home/dietpi/ha-bridge
-ExecStart=/usr/bin/java -jar -Dconfig.file=/home/dietpi/ha-bridge/data/habridge.config /home/dietpi/ha-bridge/ha-bridge-5.4.1.jar
+ExecStart=/usr/bin/java -jar -Dconfig.file=/home/dietpi/ha-bridge/data/habridge.config /home/dietpi/ha-bridge/ha-bridge-5.5.0.jar
 
 [Install]
 WantedBy=multi-user.target
