@@ -1,3 +1,4 @@
+<div class="nav-pills-scroll">
 <ul class="nav nav-pills" role="tablist">
 	<li role="presentation" class="active"><a href="#!/">Bridge Devices</a></li>
 	<li role="presentation"><a href="#!/system">Bridge Control</a></li>
@@ -24,6 +25,7 @@
 	<li ng-if="bridge.showHomeGenie" role="presentation"><a href="#!/homegeniedevices">HomeGenie Devices</a></li>
 	<li role="presentation"><a href="#!/editdevice">Add/Edit</a></li>
 </ul>
+</div>
 <div postrender-action="goToRow()">
 	<div class="panel panel-default">
 		<div class="panel-heading">
@@ -31,18 +33,18 @@
 		</div>
 		<div class="panel-body">
 
-			<div class="form-group">
+			<div class="filter-bar">
 				<button class="btn btn-primary" type="submit" ng-click="renumberDevices()">Renumber Devices</button>
 				<button ng-if="bridge.securityInfo.useLinkButton" class="btn btn-primary" type="submit"
 					ng-click="pushLinkButton()">Link</button>
 				<button class="btn btn-primary" type="submit" ng-click="manageLinksButton()">Manage Links</button>
-				<label for="device-ip-filter">Show devices visible to: </label>
-				<input type="text" id="device-ip-filter" style="width:150px"
-					ng-model="bridge.state.filterDevicesByIpAddress" placeholder="">
-				<input type="checkbox" id="device-ip-filter-mode" ng-model="bridge.state.filterDevicesOnlyFiltered"
-					ng-true-value=true ng-false-value=false style="margin-right: 3px">Must contain filter
-				<label for="device-type-filter" style="margin-left:50px">Filter device type: </label>
-				<select name="device-type" id="device-type-filter" ng-model="bridge.state.filterDeviceType">
+				<label for="device-ip-filter">Visible to:</label>
+				<input type="text" id="device-ip-filter" class="form-control"
+					ng-model="bridge.state.filterDevicesByIpAddress" placeholder="IP address filter">
+				<label><input type="checkbox" id="device-ip-filter-mode" ng-model="bridge.state.filterDevicesOnlyFiltered"
+					ng-true-value=true ng-false-value=false style="margin-right:4px">Must contain</label>
+				<label for="device-type-filter">Type:</label>
+				<select name="device-type" id="device-type-filter" class="form-control" ng-model="bridge.state.filterDeviceType">
 					<option value="">---No Filter---</option>
 					<!-- not selected / blank option -->
 					<option value="custom">Custom</option>
@@ -61,6 +63,7 @@
 				</select>
 			</div>
 
+			<div class="table-responsive">
 			<scrollable-table watch="bridge.devices">
 				<table class="table table-bordered table-striped table-hover">
 					<thead>
@@ -110,6 +113,7 @@
 					</tr>
 				</table>
 			</scrollable-table>
+			</div>
 		</div>
 	</div>
 </div>

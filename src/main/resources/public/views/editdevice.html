@@ -1,3 +1,4 @@
+<div class="nav-pills-scroll">
 <ul class="nav nav-pills" role="tablist">
 	<li role="presentation"><a href="#!/">Bridge Devices</a></li>
 	<li role="presentation"><a href="#!/system">Bridge Control</a></li>
@@ -25,6 +26,7 @@
 	<li ng-if="bridge.showHomeGenie" role="presentation"><a href="#!/homegeniedevices">HomeGenie Devices</a></li>
 	<li role="presentation" class="active"><a href="#!/editdevice">Add/Edit</a></li>
 </ul>
+</div>
 
 <div class="panel panel-default">
 	<div class="panel-heading">
@@ -182,7 +184,7 @@
 				<tr ng-hide="!showUrls">
 					<td><label>OnUrl</label></td>
 
-					<td><textarea class="form-control" id="device-on-url" style="min-height: 250px; min-width: 1300px" 
+					<td><textarea class="form-control" id="device-on-url" style="min-height: 180px" 
 						ng-model="onUrl" placeholder="default"></textarea></td>
 				</tr>
 				
@@ -213,7 +215,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]" style="max-width: 150px"
 									ng-model="onItem.type"></select></td>
 								<td><textarea rows="1" class="form-control"
-										id="item-target" ng-model="onItem.item" style="min-width: 600px" placeholder="The Call"></textarea></td>
+										id="item-target" ng-model="onItem.item" style="width:100%" placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="onItem.delay" placeholder="millis"></textarea></td>
 								<td><textarea rows="1" class="form-control" style="max-width: 80px; min-width: 80px"
@@ -263,7 +265,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="newOnItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" style="min-width: 600px" ng-model="newOnItem.item"
+										id="item-target" style="width:100%" ng-model="newOnItem.item"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="newOnItem.delay"
@@ -316,7 +318,7 @@
 				<tr ng-hide="!showUrls">
 					<td><label>DimUrl</label></td>
 
-					<td><textarea class="form-control" id="device-dim-url" style="min-height: 250px; min-width: 1300px"
+					<td><textarea class="form-control" id="device-dim-url" style="min-height: 180px"
 						ng-model="dimUrl" placeholder="default"></textarea></td>
 				</tr>
 				
@@ -347,7 +349,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="dimItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="dimItem.item" style="min-width: 600px"
+										id="item-target" ng-model="dimItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="dimItem.delay" placeholder="millis"></textarea></td>
@@ -398,7 +400,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="newDimItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="newDimItem.item" style="min-width: 600px"
+										id="item-target" ng-model="newDimItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="newDimItem.delay"
@@ -451,7 +453,7 @@
 				<tr ng-hide="!showUrls">
 					<td><label>OffUrl</label></td>
 
-					<td><textarea class="form-control" id="device-off-url" style="min-height: 250px; min-width: 1300px"
+					<td><textarea class="form-control" id="device-off-url" style="min-height: 180px"
 						ng-model="offUrl" placeholder="default"></textarea></td>
 				</tr>
 				
@@ -482,7 +484,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="offItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="offItem.item" style="min-width: 600px"
+										id="item-target" ng-model="offItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="offItem.delay" placeholder="millis"></textarea></td>
@@ -533,7 +535,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="newOffItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="newOffItem.item" style="min-width: 600px"
+										id="item-target" ng-model="newOffItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="newOffItem.delay"
@@ -586,7 +588,7 @@
 				<tr ng-hide="!showUrls">
 					<td><label>ColorUrl</label></td>
 
-					<td><textarea class="form-control" id="device-color-url" style="min-height: 250px; min-width: 1300px"
+					<td><textarea class="form-control" id="device-color-url" style="min-height: 180px"
 						ng-model="colorUrl" placeholder="default"></textarea></td>
 				</tr>
 				<tr ng-hide="showUrls">
@@ -616,7 +618,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="colorItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="colorItem.item" style="min-width: 600px"
+										id="item-target" ng-model="colorItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="colorItem.delay" placeholder="millis"></textarea></td>
@@ -667,7 +669,7 @@
 									ng-options="mapType as mapType[1] for mapType in bridge.mapTypes track by mapType[0]"
 									ng-model="newColorItem.type"></select></td>
 								<td><textarea rows="1" cols="20" class="form-control"
-										id="item-target" ng-model="newColorItem.item" style="min-width: 600px"
+										id="item-target" ng-model="newColorItem.item" style="width:100%"
 										placeholder="The Call"></textarea></td>
 								<td><textarea rows="1" cols="4" class="form-control" style="max-width: 80px; min-width: 80px"
 										id="item-delay" ng-model="newColorItem.delay"

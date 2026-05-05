@@ -1,75 +1,157 @@
-[ng\:cloak],
-[ng-cloak],
-[data-ng-cloak],
-[x-ng-cloak],
-.ng-cloak,
-.x-ng-cloak {
+/* AngularJS cloak */
+[ng\:cloak],[ng-cloak],[data-ng-cloak],[x-ng-cloak],.ng-cloak,.x-ng-cloak {
     display: none !important;
 }
-body {
-            padding-top: 60px;
-            padding-bottom: 20px;
-        }
 
-.sortorder:after {
-	    content: '\25b2';
-	  }
-.sortorder.reverse:after {
-	    content: '\25bc';
-	  }
+/* ── Layout ── */
+body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+}
+
+/* ── Sort indicators ── */
+.sortorder:after  { content: '\25b2'; }
+.sortorder.reverse:after { content: '\25bc'; }
+
+/* ── Form containers ── */
 .form-container {
     position: relative;
     bottom: 0;
-    display: table-cell;
-    vertical-align: middle;
 }
-
-.form-container form > div {
-    padding: 0 15px;
-}
-
-.form-container form > button {
-    margin-left: 15px;
-}
+.form-container form > div    { padding: 0 15px; }
+.form-container form > button { margin-left: 15px; }
 
 legend.form-label {
-    font-size: 24pt;
+    font-size: 22pt;
     padding: 0 15px;
 }
 
-.form-control.error {
-    border-color: red;
-}
+/* ── Form validation ── */
+.form-control.error     { border-color: #d9534f; box-shadow: 0 0 4px rgba(217,83,79,.4); }
+.form-hint              { font-size: 10pt; line-height: 12pt; margin: -5px auto 5px; color: #999; }
+.form-hint.error        { color: #c00; font-weight: bold; font-size: 8pt; }
 
-.form-hint {
-    font-size: 10pt;
-    line-height: 12pt;
-    margin: -5px auto 5px;
-    color: #999;
-}
+/* ── Messages ── */
+.msg-block { margin-top: 5px; }
+.msg-error { color: #f00; font-size: 14px; }
 
-.form-hint.error {
-    color: #C00;
-    font-weight: bold;
-    font-size: 8pt;
-}
-
-.msg-block {
-    margin-top:5px;
-}
-.msg-error {
-    color:#F00;
-    font-size:14px;
-}
-
+/* ── Progress bar ── */
 .progress {
     display: inline-block;
     width: 100px;
-    border: 3px groove #CCC;
+    border: 3px groove #ccc;
+}
+.progress div { font-size: smaller; background: greenyellow; width: 0; }
+
+/* ── Back-to-top button ── */
+.goToTop {
+    position: fixed;
+    bottom: 15px;
+    right: 15px;
+    z-index: 100000;
+    cursor: pointer;
+    opacity: .65;
+    filter: alpha(opacity=65);
+}
+.goToTop .btn { padding: 8px 14px; }
+
+/* ════════════════════════════════════════════
+   RESPONSIVE / MOBILE IMPROVEMENTS
+   ════════════════════════════════════════════ */
+
+/* ── Nav-pills: horizontal scroll on small screens ── */
+.nav-pills-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+    padding-bottom: 4px;
+    margin-bottom: 12px;
+}
+.nav-pills-scroll > .nav-pills {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    float: none;
+    white-space: nowrap;
+}
+.nav-pills-scroll > .nav-pills > li { display: inline-block; float: none; }
+.nav-pills-scroll > .nav-pills > li > a { padding: 6px 10px; }
+
+/* ── Tables: always horizontally scrollable ── */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
-.progress div {
-    font-size: smaller;
-    background: greenyellow;
-    width: 0;
+/* Override hardcoded min-widths from inline styles */
+textarea.form-control { min-width: 0 !important; width: 100% !important; }
+input.form-control    { min-width: 0 !important; }
+
+/* ── Filter row on configuration page ── */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
 }
+.filter-bar label  { margin: 0; white-space: nowrap; }
+.filter-bar input[type="text"],
+.filter-bar select { flex: 1 1 140px; min-width: 100px; max-width: 260px; }
+.filter-bar .btn   { white-space: nowrap; }
+
+/* ── Touch-friendly buttons ── */
+@media (max-width: 767px) {
+    .btn { min-height: 38px; padding: 6px 10px; }
+
+    /* Stack action buttons in table cells */
+    td > p > .btn { display: block; width: 100%; margin: 2px 0; }
+
+    /* Full-width form inputs on mobile */
+    .form-group .form-control { width: 100% !important; max-width: none !important; }
+
+    /* Panel titles smaller */
+    .panel-title { font-size: 16px; }
+
+    /* Reduce body top padding (navbar collapses) */
+    body { padding-top: 50px; }
+
+    /* Navbar brand font size */
+    .navbar-brand { font-size: 16px; }
+
+    /* Modals full-screen */
+    .ngdialog.ngdialog-theme-default .ngdialog-content {
+        width: 96% !important;
+        margin: 0 auto;
+    }
+
+    /* Hide PayPal donate in About dropdown on mobile */
+    .donate-form { display: none; }
+
+    /* Wider filter inputs */
+    .filter-bar input[type="text"],
+    .filter-bar select { max-width: 100%; flex: 1 1 100%; }
+}
+
+@media (max-width: 480px) {
+    legend.form-label { font-size: 16pt; }
+    .goToTop .btn { padding: 6px 10px; font-size: 12px; }
+}
+
+/* ── Tablet improvements ── */
+@media (min-width: 768px) and (max-width: 991px) {
+    textarea.form-control { min-height: 120px; }
+    td > p > .btn { margin: 1px; }
+}
+
+/* ── Scrollable edit-form table ── */
+.edit-form-table {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+}
+.edit-form-table table { min-width: 340px; width: 100%; }
+.edit-form-table textarea { min-width: 0 !important; width: 100% !important; min-height: 180px; }
+
+/* ── System page sections ── */
+.system-section { margin-bottom: 20px; }
